@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+  moduleFormat = "cjs" // 👈 Add this line!
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ROLE{
+  user
+  admin
+}
+
+model User {
+  id  String @id @default(uuid())
+  name String  
+  email String @unique
+  password String
+  createdAt DateTime @default(now())   
+  tokens Token[]
+  folders Folder[] @relation("author")
+  isActive Boolean @default(true)
+  role ROLE @default(user)
+  @@map("users") // 👈Tells prismma call it User in vscode while users in pgadmin
+}
+
+model Token{
+  id String @id @default(uuid())
+  token String @unique
+  expireAt DateTime 
+  isVaild Boolean @default(true)
+  userId String
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("tokens")
+}
+
+enum AssetType{
+  IMAGE
+  VIDEO
+}
+
+model Asset{
+  id String @id @default(uuid())
+  assetName String 
+  type AssetType 
+  folderId String?
+  currentVerId String? @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  description String
+  userId String
+  isActive Boolean @default(true)
+
+  folder Folder? @relation("assetFolder",fields:[folderId], references:[id])
+  curVersion Version? @relation("CurrentVersion",fields:[currentVerId], references:[id])
+
+  versions Version[] @relation("AssetHistory")
+  assetTag AssetTag[] @relation("AssetTag")
+  @@map("assets")
+}
+
+model Tag{
+  id Int @id @default(autoincrement())
+  name String @unique
+  assetTag AssetTag[] @relation("AssetTag")
+
+  @@map("tags")
+}
+
+model AssetTag{
+  assetId String
+  tagId Int
+  tagName String
+  asset Asset @relation("AssetTag", fields:[assetId],references:[id])
+  tag Tag @relation("AssetTag",fields:[tagId],references:[id])
+
+  @@id([assetId,tagId]) //Composite Key for both Ids  
+  @@index([tagId])
+  @@map("assettags")
+}
+ 
+model Folder{
+  id String @id @default(uuid())
+  folderName String
+  parentId String?
+  parentFolder Folder? @relation("FolderToFolder", fields:[parentId], references:[id])
+  isPublic Boolean @default(true)
+  userId String
+
+  children Folder[] @relation("FolderToFolder")
+  user User @relation("author", fields:[userId],references:[id],onDelete:SetNull)
+  isActive Boolean @default(true)
+
+  assetsId Asset[] @relation("assetFolder")
+  @@map("folders")
+}
+
+model Version{
+  id String @id @default(uuid())
+  assetId String
+  isLatest Boolean
+  s3Key String
+  s3VerId String
+  fileSize Int
+  createdAt DateTime @default(now()) 
+
+  asset Asset @relation("AssetHistory",fields:[assetId], references:[id])
+  assetCurrent Asset? @relation("CurrentVersion")
+  @@map("versions")
+}

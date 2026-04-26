@@ -1,0 +1,41 @@
+**[To_Make_a_migration]**
+*1.Generate the file*
+npx prisma migrate dev --name example_name --create-only
+*2.this will create the example sql code without running into the db, you edit this sql file and to run it to db:* 
+npx prisma migrate dev
+
+
+**[Table_Relationships__1-M]**
+model User {
+  id  String @id @default(uuid())
+  tokens Token[] // [1].The User has many tokens
+}
+model Token{
+  userId String // [2].The Foriegn key
+  user User @relation(fields: [userId], references: [id]) // [3]. The Connection 
+}
+
+*After Changing the prisma schema, you must restart the prisma client;*
+npx prisma generate
+
+If a migration file is recoreded in postgres' _prisma_migrations table but the sql itself isn't applied to the db
+Delete the migration file from that table and run the migration again
+
+
+[22/4]🌟🌟🌟If You added a column that should be requied, but sql says there's rows where its null and preventing the migration
+1- Add the column and let it be null
+2- Alter table and give all the rows a defualt value (isActive:true)
+3- Alter the table again & alter the column and make it NOT NULL
+
+Sonia Tasklist: [1st/4] & [2nd/4]
+The Rest of User CRUDs ✅
+Token Functionality: Model & CRUDs (Refresh & Access) ✅✅✅
+1st Model: Asset Model
+
+
+
+Design Patterns: 
+Strategy : HashingProvider ✅
+Composite: Folder/file Structure
+Memento: Version Handling
+

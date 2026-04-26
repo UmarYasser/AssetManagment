@@ -1,0 +1,10 @@
+Design Patterns:
+Startegy(HashingProvider) - Composite(Folder Hiereachy) - Memento(Versioning)
+
+AWS S3 Bucket:
+**Bucket Versioning**: to keep a history of the assets
+**Object Ownership**: To have access to all objects uploaded by anybody
+**Asyncronous Uploads**: When uploading files, the backend only handles the signedUrl, while the heavy media files are sent from the front end to the AWS S3 bucket
+To ensure that  the back-end stays fast, light and available for high-traffic use
+**Versioning Rotation**: Keeping only the last 5 versions of any asset
+
