@@ -15,7 +15,6 @@ export class AuthController{
     @Post('signup')
     async signup(@Body() body:SignUpDTO){
         //🌟 Will be replaced with the Match Decorator in the future
-        if(body.password !== body.confirmPassword) return {error: 'The password and confirm password fields must match'}
         return this.authSrv.signup(body)
     }
 
@@ -23,6 +22,7 @@ export class AuthController{
     @Post('login')
     @HttpCode(200)
     async login(@Body() body:LogInDTO){
+        console.log("System Working")
         return this.authSrv.login(body)
     }
 }

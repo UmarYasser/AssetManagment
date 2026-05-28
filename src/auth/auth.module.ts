@@ -6,6 +6,7 @@ import { PrismaService } from 'src/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import HashingProvider from './providers/hashing.provider';
 import { TokenModule } from 'src/token/token.module';
+import { FolderModule } from '@/folder/folder.module';
 
 @Module({
     controllers:[AuthController],
@@ -15,6 +16,6 @@ import { TokenModule } from 'src/token/token.module';
             useClass:BcryptProvider
         },
     ],
-    imports:[TokenModule]
+    imports:[TokenModule,FolderModule]
 })
 export class AuthModule {}

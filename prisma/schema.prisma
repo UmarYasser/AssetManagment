@@ -26,6 +26,7 @@ model User {
   createdAt DateTime @default(now())   
   tokens Token[]
   folders Folder[] @relation("author")
+  collaborator Collaborator[] @relation("collabs")
   isActive Boolean @default(true)
   role ROLE @default(user)
   @@map("users") // 👈Tells prismma call it User in vscode while users in pgadmin
@@ -51,20 +52,24 @@ model Asset{
   id String @id @default(uuid())
   assetName String 
   type AssetType 
-  folderId String?
-  currentVerId String? @unique
+  ownerId String
+  description String
+  coverImage String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  description String
-  userId String
   isActive Boolean @default(true)
+  s3Key String
+  fileSize Int
+  mainFolder String?
+  
+  folder Folder? @relation("mainFolder", fields:[mainFolder], references:[id])
+  assetFolder AssetFolder[] @relation("afJoin")
 
-  folder Folder? @relation("assetFolder",fields:[folderId], references:[id])
-  curVersion Version? @relation("CurrentVersion",fields:[currentVerId], references:[id])
-
-  versions Version[] @relation("AssetHistory")
   assetTag AssetTag[] @relation("AssetTag")
   @@map("assets")
+
+  //=> Add s3Key, coverImage
+  //=> Remove isActive? Pintrest performs hard deletion
 }
 
 model Tag{
@@ -78,7 +83,6 @@ model Tag{
 model AssetTag{
   assetId String
   tagId Int
-  tagName String
   asset Asset @relation("AssetTag", fields:[assetId],references:[id])
   tag Tag @relation("AssetTag",fields:[tagId],references:[id])
 
@@ -94,25 +98,36 @@ model Folder{
   parentFolder Folder? @relation("FolderToFolder", fields:[parentId], references:[id])
   isPublic Boolean @default(true)
   userId String
-
-  children Folder[] @relation("FolderToFolder")
-  user User @relation("author", fields:[userId],references:[id],onDelete:SetNull)
   isActive Boolean @default(true)
 
-  assetsId Asset[] @relation("assetFolder")
+  asset Asset[] @relation("mainFolder")
+  children Folder[] @relation("FolderToFolder")
+  user User @relation("author", fields:[userId],references:[id],onDelete:SetNull)
+
+  assetFolder AssetFolder[] @relation("afJoin")
+  collaborator Collaborator[] @relation("collabs")
   @@map("folders")
 }
 
-model Version{
-  id String @id @default(uuid())
-  assetId String
-  isLatest Boolean
-  s3Key String
-  s3VerId String
-  fileSize Int
-  createdAt DateTime @default(now()) 
+model AssetFolder{
+  assetId String @default(uuid())
+  folderId String @default(uuid())
+  isOwner Boolean @default(false)
+  createdAt DateTime @default(now())
 
-  asset Asset @relation("AssetHistory",fields:[assetId], references:[id])
-  assetCurrent Asset? @relation("CurrentVersion")
-  @@map("versions")
+  asset Asset @relation("afJoin",fields: [assetId], references:[id], onDelete: Cascade)
+  folder Folder @relation("afJoin",fields: [folderId], references:[id], onDelete: Cascade)
+  @@id([assetId,folderId])
+  @@map("assetfolders")
+}
+
+model Collaborator{
+  folderId String @default(uuid())
+  userId String @default(uuid())
+  createdAt DateTime @default(now())
+
+  folder Folder @relation("collabs", fields:[folderId], references:[id], onDelete:Cascade)
+  user User @relation("collabs", fields:[userId], references:[id], onDelete:Cascade)
+  @@id([folderId,userId])
+  @@map("collaborators")
 }

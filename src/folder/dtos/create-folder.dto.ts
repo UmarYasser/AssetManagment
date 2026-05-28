@@ -8,10 +8,10 @@ export class CreateFolderDTO{
     @IsString()
     // @IsNotEmpty()
     @IsOptional()
-    parentId!:string
+    parentId?:string 
 
     @IsBoolean()
     // @IsNotEmpty()
     @IsOptional()
-    isPublic!: boolean
+    isPublic?: boolean
 }

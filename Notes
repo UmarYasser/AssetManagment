@@ -27,15 +27,20 @@ Delete the migration file from that table and run the migration again
 2- Alter table and give all the rows a defualt value (isActive:true)
 3- Alter the table again & alter the column and make it NOT NULL
 
-Sonia Tasklist: [1st/4] & [2nd/4]
-The Rest of User CRUDs ✅
-Token Functionality: Model & CRUDs (Refresh & Access) ✅✅✅
-1st Model: Asset Model
-
+[26/5]⭐⭐⭐
+TO join m-m relationships tables
+        const assets = await this.prisma.asset.findMany({
+            where:{},
+            include:{
+                assetFolder:{   
+                    include:{
+                        folder:{ select:{}
+                        }}}}    })
+1-Include the junction table relaiton, then include the 2nd tabls from it again                      
 
 
 Design Patterns: 
 Strategy : HashingProvider ✅
 Composite: Folder/file Structure
-Memento: Version Handling
+
 

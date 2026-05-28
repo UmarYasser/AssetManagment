@@ -1,4 +1,6 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand,
+    CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand } 
+    from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -18,21 +20,72 @@ export class S3Service{
                 secretAccessKey:this.configSrv.get("AWS_SECRET_ACCESS_KEY")!
             }
         })
+    }  
+
+    //✅✅✅Needs Adjustment after Schema changes
+    async generateUploadUrl(fileName:string, contentType:string,uuid:string,option?:string){
+        const datePrefix=  new Date().toISOString().split('T')[0]
+        let folder = `uploads/${datePrefix}-${uuid}` // The main folder of the asset in s3
+        let fileKey:string
+        let ext:string = contentType.split('/')[1]
+        if(option=='cover'){
+            fileKey = `${folder}/cover/${fileName.split('.')[0]}.png`
+        }else
+            fileKey = `${folder}/${fileName}.${ext}`
+        // const folder = `uploads/${datePrefix}-${uuid}`
+
+        console.log(`Content Type passed into the signedUrl: ${contentType}`)
+        // Which means the s3 folder containts mulitple files
+        const command = new PutObjectCommand({
+            Bucket : this.configSrv.get('AWS_BUCKET_NAME'),
+            Key: fileKey,
+            ContentType: contentType, // Default if content type is not provided
+        })
+
+        const signedUrl = await getSignedUrl(this.s3,command, {
+            expiresIn: 60*5,
+            signableHeaders: new Set(['content-type', 'host'])
+        }) // 🌟Takes secs not millises like jwt
+
+        return {signedUrl, fileKey}
     }
 
-    async generateUploadUrl(fileName:string, contentType:string){
+    //⭐For Videos: Multipart as chucks
+    async startMPU(fileName:string, contentType:string){
         const datePrefix=  new Date().toISOString().split('T')[0]
         const fileKey = `uploads/${datePrefix}-${uuid()}/${fileName}`
 
-        const command = new PutObjectCommand({
-            Bucket : this.configSrv.get('AWS_BUCKET_NAME'),
+        const command = new CreateMultipartUploadCommand({
+            Bucket: this.configSrv.get('AWS_BUCKET_NAME'),
             Key: fileKey,
             ContentType: contentType
         })
 
-        const signedUrl = await getSignedUrl(this.s3,command, {expiresIn: 60*5}) // 🌟Takes secs not millises like jwt
+        const {UploadId} = await this.s3.send(command)
+        return {UploadId,Key: fileKey}
+    }
 
-        return {signedUrl, fileKey}
+    async getUploadUrlMPU(fileName:string,uploadId:string, partNumber:number){
+        
+        const command = new UploadPartCommand({
+            Bucket: this.configSrv.get('AWS_BUCKET_NAME'),
+            Key: fileName,
+            UploadId: uploadId,
+            PartNumber: partNumber
+        })
+        const signedUrl = await getSignedUrl(this.s3,command, {expiresIn:60*5})
+        return signedUrl
+    }
+
+    async completeMPU(fileName:string,uplaodId:string, parts:{ETag:string, PartNumber:number}[]){
+        const command = new CompleteMultipartUploadCommand({
+            Bucket: this.configSrv.get('AWS_BUCKET_NAME'),
+            Key: fileName,
+            UploadId: uplaodId,
+            MultipartUpload: { Parts: parts }
+        })
+        const res = await this.s3.send(command)
+        return res
     }
 
     async generateViewUrl(fileKey:string){

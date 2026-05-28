@@ -8,7 +8,7 @@ export default class CreateAssetDTO{
     
     // @IsEnum(AssetType)
     @IsNotEmpty()
-    @Matches(/^(image\/(jpg|jpeg|png)|video\/(mp4|webm|ogg))$/,
+    @Matches(/^(image\/(jpg|jpeg|png)|video\/(mp4|webm|ogg|octet-stream))$/,
         {message: "Type must be an image(png,jpeg,jpg) or a video(mp4,webm,ogg)"}
     )
     type!: string;
@@ -19,7 +19,7 @@ export default class CreateAssetDTO{
 
     @IsString()
     @IsOptional()
-    folderId?: string;
+    mainFolder?: string;
 
     @IsNumber()
     @IsNotEmpty()

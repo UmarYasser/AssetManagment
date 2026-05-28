@@ -1,0 +1,29 @@
+🚨🚨Finishing Phase I:
+1-Manage Roles ✅
+2-Remove Junction Table modules/Postman folders and add them to the appropriate Model ✅
+3-Add /api/v1 ✅
+4-Global Prisma Exception Handler ✅
+5?- Resolve upload video problem
+Should Push Notificatoins be in Phase I?
+
+
+//✅Current!
+Network Final Tasks [20/5]:
+1-Finish Collaborator APIs ✅
+2-Add a "Saved" folder with any user signup ✅
+3-Finish tags/assettags model ✅
+⭐90% Phase I
+
+✅Current!
+Number Theory Final Tasks [17/5]: 
+1-"Deleting An Asset":Resolve when deleting an asset, should the api be from the asset module or the assetFolder j table
+2-"Purge vs Unsave":Make it consider the mainFolder of the asset, when the asset is deleted from that folder and the ownerId is the same as the userId in the req, delete it everywhere
+3-"Saved Assets": Add a folder to each user during signUp &&& "isSystemDefault" flag to prevent deletion
+4-"Folder Creation": In Pintrest, the user must add any pin to the board during creation
+
+
+
+Sonia Tasklist: [1st/4] & [2nd/4]
+The Rest of User CRUDs ✅
+Token Functionality: Model & CRUDs (Refresh & Access) ✅✅✅
+1st Model: Asset Model

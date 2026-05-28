@@ -30,8 +30,7 @@ export class AuthGuard implements CanActivate {
       context.getHandler(), // Checks the function
       context.getClass(),   // Checks the Controller
     ]);
-    console.log("🌟Is this route public?", isPublic)
-    if(isPublic)
+    if(isPublic )
       return true
 
 
@@ -45,7 +44,10 @@ export class AuthGuard implements CanActivate {
       if (!payload || !payload.role) 
         throw new UnauthorizedException('Invalid token payload or missing role');
 
-    
+      if(payload.role =='admin'){
+        request['user'] = payload;
+        return true // Allow the admin to paypass anything
+      }
       // Validate if the user with the id is found and active in the db
       const user = await this.prisma.user.findUnique({
         where: {id: payload.sub, isActive:true}

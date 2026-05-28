@@ -3,10 +3,10 @@ import { S3Service } from "src/s3.service";
 import CreateAssetDTO from "./dtos/create-asset.dto";
 import { PrismaService } from "src/prisma.service";
 import { v4 as uuid } from 'uuid'
-import { AuthGuard } from "common/guards/auth.guard";
 import { EditAssetDTO } from "./dtos/edit-asset.dto";
-import { NotFound } from "@aws-sdk/client-s3";
 import { MoveToAssetDTO } from "./dtos/moveto-asset.dto";
+import { CreateATDTO } from "@/asset/dtos/create-assettag.dto";
+import { DeleteATDTO } from "./dtos/delete-assettag.dto";
 
 @Injectable()
 export class AssetService{
@@ -15,137 +15,133 @@ export class AssetService{
         private readonly prisma: PrismaService,
     ){}
 
-    async moveto(maDTO: MoveToAssetDTO,user:any){
-        const {assetId, folderId}  = maDTO
+    // Moved to Folder Service to avoid circular dependency
+    // async moveto(maDTO: MoveToAssetDTO,user:any){}
 
-        const folder  = await this.prisma.folder.findUnique({
-            where: {id: folderId, isActive:true}
-        })
+    async upload(crAssetDto: CreateAssetDTO,ownerId:string){
+        const assetUuid = uuid()
+        const assObj ={
+            thumbnailUrl: '',
+            thumbnailKey:''
+        }
+        if(crAssetDto.type.split('/')[0] == 'video'){
 
-        if(!folder)
-            throw new NotFoundException("Folder not found")
-            
-        let asset = await this.prisma.asset.findUnique({
-            where:{ id:assetId, isActive:true}
-        })
-        
-        if(!asset)
-            throw new NotFoundException("Asset not found")
-
-        if(!(asset.userId == user.id || user.role =='admin'))
-            throw new ForbiddenException("You don't have the access to this asset")
-
-        asset = await this.prisma.asset.update({
-            where: {id:assetId},
-            data:{ folderId:folder.id}
-        })
-        return asset
-    }
-
-    async upload(crAssetDto: CreateAssetDTO,userId:string){
-        const {signedUrl, fileKey} = await this.s3Srv.generateUploadUrl(crAssetDto.assetName, crAssetDto.type) //Example is the full image/png not just image
-
-        const verUuid = uuid()
-        //🌟To ensure atomicity => Both will be created or both will fail
-        const result = await this.prisma.$transaction(async tx =>{
-            let asset =  await tx.asset.create({
+            const {signedUrl,fileKey} = await this.s3Srv.generateUploadUrl(crAssetDto.assetName,crAssetDto.type,assetUuid,'cover') //  The cover image will be generated in the frontend and uploaded with the same name but png extension
+            assObj.thumbnailUrl = signedUrl
+            assObj.thumbnailKey = fileKey
+        }
+        const {signedUrl, fileKey} = await this.s3Srv.generateUploadUrl(crAssetDto.assetName, crAssetDto.type, assetUuid) //Example is the full image/png not just image
+        let asset = await this.prisma.asset.create({
                 data: {
+                    id: assetUuid,
                     assetName: crAssetDto.assetName,
                     type: crAssetDto.type.split('/')[0] == "image" ? "IMAGE" : "VIDEO",
-                    folderId: crAssetDto.folderId ?? null,
+                    mainFolder: crAssetDto.mainFolder ?? null,
                     description: crAssetDto.description,
-                    userId,
-                    // currentVerId: verUuid => Must wait until the version get created
+                    ownerId,
+                    s3Key:fileKey,
+                    fileSize: crAssetDto.fileSize,
+                    coverImage: assObj.thumbnailKey? assObj.thumbnailKey : null, // For videos, we will have a cover image, for images this will be null
                     // 🚨Make pre-request script to make postman calculate the actual filesize}
-                },
-                // include:{ currentVersion: true} currentVerId must be a foriegn key for that to work, maybe later
-            })
-            const version = await tx.version.create({
-                data: {
-                    id: verUuid,
-                    assetId: asset.id,
-                    s3Key: fileKey,
-                    s3VerId: "ver1",
-                    isLatest: true,
-                    fileSize: crAssetDto.fileSize 
-                    // 🚨Make pre-request script to make postman calculate the actual filesize
                 }
-            })
-            asset = await tx.asset.update({
-                where: {id: asset.id},
-                data: {currentVerId: verUuid}
-            })
-            return {asset,version}
-             // 🌟 Using transaction due to circular dep. => the asset wants the curVersionId that doesn't exist yet, and the version waits for asset to be created
-        })
-        // 🚨Handle Tags with uploading
+                })        
+                // 🚨Handle Tags with uploading
+                
+        return {asset, thumbnailUrl: assObj.thumbnailUrl? assObj.thumbnailUrl : null, videoUrl:signedUrl}
 
-        return {result, signedUrl}
     }
 
-    //?🚨? GetByName?
+    //⭐⭐ If an asset which is private appeared in the search,
+    //Only an admin or the owner of the folder can see it
+    async search(name:string, user:any){
+        let assets:any
+        //If the user isn't an admin, add the policy needed to the query [Advanced Query]
+        const query:any = {
+            where:{
+                assetName:{
+                    contains: name,
+                    mode:'insensitive'
+                }
+            },
+            select:{
+                id:true,
+                assetName:true,
+                s3Key:true,
+                coverImage:true,
+                mainFolder:true,
+                ownerId:true,
+                assetFolder:{
+                    select:{
+                        folder:{
+                            select:{
+                                id:true,
+                                folderName:true,
+                                userId:true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if(user.role != 'admin'){ // No Filtration if the folder is private or the owner is searching
+            query.where.OR = [
+                {mainFolder:null},
+                {
+                    folder:{
+                        isActive:true,
+                        OR:[
+                            {isPublic: true},
+                            {userId: user.sub}
+                        ]
+                    }
+                }
+            ]
+        }
+
+            assets = await this.prisma.asset.findMany(query)
+        
+        return assets
+    }
+
     async getById(id:string, user:any){
         const asset = await this.prisma.asset.findUnique({
             where: {id, isActive:true},
-            include:{
-                curVersion: true,
-            } // Is this valid prisma syntax to select from the joined version recored?
         })
         if(!asset)
             throw new NotFoundException("Asset not found")
-        const viewUrl = await this.s3Srv.generateViewUrl(asset?.curVersion!.s3Key!)
+        const viewUrl = await this.s3Srv.generateViewUrl(asset?.s3Key!)
         return {asset, viewUrl}
-    } 
+    }     
 
-    async getByTag(tags: string){ // what is type array in ts? answer:
-        const assets = await this.prisma.asset.findMany({
-            where:{
-                isActive:true,
-                assetTag:{
-                    some:{
-                        tagName: tags
-                    }
-                }
-            },
-            include:{
-                curVersion:{
-                    select:{
-                        id:true,
-                        s3Key:true
-                    }
-                },
-            }
-
+    async getAll(){
+        return await this.prisma.asset.findMany({
+            where:{isActive:true}
         })
-        if(!assets || assets.length <1)
-            throw new NotFoundException("No Assets was found with that tag")
-
-        const result = await Promise.all(
-            assets.map(async ast =>({
-                ...ast,
-                viewUrl: await this.s3Srv.generateViewUrl(ast.curVersion?.s3Key!)
-            }))
-        )
-        return result
     }
 
-    async edit( editAssetDto: EditAssetDTO,id:string){
+    async edit( editAssetDto: EditAssetDTO,id:string,user:any){
         const {...upDto} = editAssetDto
-        //🌟Check if the folderId is in the reqBody, then it must be in the folder table
-        if(upDto.folderId){
-            const folder = await this.prisma.folder.findUnique({
-                where: {id: upDto.folderId, isActive:true}
-            })
-            console.log("folder:", folder)
-            if(!folder)
-                throw new NotFoundException("Folder not found")
+        //🌟Check if the mainFolder is in the reqBody, then it must be in the folder table
+        if(upDto.mainFolder ){
+            if(user.role != 'admin')
+            throw new ForbiddenException("You can't change the main folder from this endpoint, use the moveto endpoint instead")
+            else{
+                const folder = await this.prisma.folder.findUnique({
+                    where: {id: upDto.mainFolder, isActive:true}
+                })
+                console.log("folder:", folder)
+                if(!folder)
+                    throw new NotFoundException("Folder not found")
+            }
         }
+        
         const asset = await this.prisma.asset.update({
             where:{id, isActive:true},
             data: {
                 assetName: upDto.assetName,
                 description: upDto.description,
-                folderId: upDto.folderId,
+                mainFolder: upDto.mainFolder,
                 // Other attributes like fileSize and type can't be updated from the client
             },
         })
@@ -164,25 +160,104 @@ export class AssetService{
         return asset
     }
 
-    // Soft Deletion
-    async delete(id:string,user:any){
+    // Deletion
+    async delete(id:string,user:any,fromFolder?:boolean){
         let asset = await this.prisma.asset.findUnique({ 
             where: {id, isActive:true}
         })
-
         if(!asset)
             throw new NotFoundException("Asset not found")
-
-        if(!(asset.userId == user.id || user.role =='admin'))
+        let result:any = {}
+        //If we're calling the API from the folder methods, we need to check for the collaborators, which are outside this method's scope
+        if(!(asset.ownerId == user.sub || user.role =='admin') || !fromFolder)
             throw new ForbiddenException("You are not the owner of this asset")
-        asset =await this.prisma.asset.update({
-            where: {id},
-            data:{isActive:false}
-        })
-        return asset
+        else{// Delete the asset existance from db and any folders if exist, then from the s3
+                asset = await this.prisma.asset.delete({
+                    where: {id}
+                })
+                result.asset = asset
+            result.deleteUrl = await this.s3Srv.generateDeleteUrl(asset.s3Key!)
+            if(asset.coverImage)
+                result.coverImageDeleteUrl = await this.s3Srv.generateDeleteUrl(asset.coverImage)
+        }
+        
+        //⭐Pintrest Opted for hard deletion
+        // asset =await this.prisma.asset.update({
+        //     where: {id},
+        //     data:{isActive:false}
+        // })
+
+        return result
     }
 
     //🚨 Implement HardDelete after a time period (30 days) utilizing S3 DeleteCommand
+
+
+    // ====== Tags Shit ======
+    async getByTag(tags: string){ // what is type array in ts? answer:
+        const tagsArr = tags.split(',').map(tag => tag.trim())
+        const assets = await this.prisma.asset.findMany({
+            where:{
+                isActive:true,
+                assetTag:{
+                    some:{
+                        tag:{
+                            name:{in: tagsArr}
+                        }
+                    }
+                }
+            }
+        })
+        if(!assets || assets.length <1)
+            throw new NotFoundException("No Assets was found with that tag")
+
+        const result = await Promise.all(
+            assets.map(async ast =>({
+                ...ast,
+                viewUrl: await this.s3Srv.generateViewUrl(ast.s3Key!)
+            }))
+        )
+        return result
+    }
+
+    async link(catDTO:CreateATDTO){
+        const {assetId, tagIds} = catDTO
+        const insertData = tagIds.map(id =>{
+            return  {
+                assetId,
+                tagId:id
+            }
+        })
+        console.log(insertData)
+        return await this.prisma.assetTag.createManyAndReturn({
+            data:insertData
+        })
+    }
+    
+    async unlink(datDTO:DeleteATDTO){
+        const {assetId, tagId} = datDTO
+
+        return await this.prisma.assetTag.delete({
+            where:{
+                assetId_tagId: {
+                    assetId,
+                    tagId
+                }
+            }
+        })
+    }
+
+    async getAllTags(){
+        return await this.prisma.assetTag.findMany();
+    }
+
+    async getByAsset(assetId:string){
+        const tags = await this.prisma.assetTag.findMany({
+            where:{assetId}
+        })
+
+        return tags
+    }
 }
 
 

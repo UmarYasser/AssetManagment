@@ -51,7 +51,7 @@ export class TokenService{
                 console.log("🌟Verified token", verified)
                 throw new UnauthorizedException(verified.message)
             } 
-        const user = await this.userSrv.getOne(verified.sub)
+        const user = await this.userSrv.getOneT(verified.sub,)
 
         
         if(!user) throw new UnauthorizedException("The user belonging to this token no longer exists")
