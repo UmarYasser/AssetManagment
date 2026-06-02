@@ -85,7 +85,7 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
@@ -94,6 +94,22 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1",
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^@prisma/client$": "<rootDir>/node_modules/@prisma/client",
+      "^generated/prisma/(.*)$": "<rootDir>/generated/prisma/$1"
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!uuid)"
+    ],
+    "modulePaths": [
+      "<rootDir>",
+      "<rootDir>/generated/prisma" 
+    ],
+    "transform":{
+      "^.+\\.(t|j)s$": "ts-jest"
+    }
   }
 }

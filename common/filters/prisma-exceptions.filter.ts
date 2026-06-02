@@ -15,7 +15,8 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
     const response = ctx.getResponse<Response>();
 
     const errorName = exception?.name || exception?.constructor?.name;
-
+    let errorCode:string|undefined = exception.code
+    console.log(`Error Code: ${errorCode}`)
     // 1. Handle Prisma Validation Errors (Missing fields, bad types)
     if (errorName === 'PrismaClientValidationError') {
       return response.status(HttpStatus.BAD_REQUEST).json({
@@ -37,6 +38,14 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
           message: `Unique constraint violation on ${targetField} field. This record already exists.`,
         });
       }
+    }
+
+    if(errorCode === "P2025"){
+        return response.status(HttpStatus.NOT_FOUND).json({
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+          message: `The Resource Requested isn't found to be updated or deleted.`,
+        });
     }
 
     // 3. Fallback for any other standard error

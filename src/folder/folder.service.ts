@@ -126,7 +126,15 @@ export class FolderService{
 
     async getByFolder(id:string,user:any){
         const folder = await this.prisma.folder.findUnique({
-            where: {id ,isActive:true}
+            where: {id ,isActive:true,},
+            include:{
+                assetFolder:{
+                    include:{
+                        asset:true
+                    }
+                }
+            }
+            
         })
 
         if(!folder)
@@ -137,13 +145,9 @@ export class FolderService{
                 throw new UnauthorizedException("You are not authorized to access this folder")
 
 
-        const assets = await this.getAssetByFolder(id, user.sub)
+        // const assets = await this.getAssetByFolder(id, user.sub)
+        const assets = folder.assetFolder
 
-
-        if(!await this.prisma.folder.findUnique({
-            where: {id, isActive:true}
-        }))
-            throw new NotFoundException("Folder not found")
         return assets
     }
 
@@ -162,6 +166,7 @@ export class FolderService{
         // Allow 
         let letPrivate = (user.role == 'admin' || user.sub == userId)
         console.log(`Is private folders allowed? ${letPrivate}`)
+
 
         const folders = await this.prisma.folder.findMany({
             where:{
@@ -186,7 +191,7 @@ export class FolderService{
 
     //✅Implement that if the folder isPulic = false, to check if the req.user.sub is the same as the userId
     async getById(id:string,user:any){
-        const haveAccess = user.role == 'admin' /*|| folder.userId == user.sub || collabsIDs.includes(user.sub)*/
+        
         let folder:any
         if(user.role == 'admin'){// Admins have full access
             folder = await this.prisma.folder.findUnique({
@@ -194,7 +199,7 @@ export class FolderService{
             })
 
         }else{
-            folder = await this.prisma.folder.findFirst({
+            folder = await this.prisma.folder.findUnique({
                 where:{ id,  isActive:true,
                     OR:[// If not an admin
                        { userId:user.sub}, // 1.Either he's the owner
@@ -230,8 +235,9 @@ export class FolderService{
                 
             })
         }
+        console.log(folder)
         
-        if(!folder)
+        if(!(folder instanceof Object))
             throw new NotFoundException("Folder not found")
         
         return folder
@@ -284,7 +290,7 @@ export class FolderService{
                 } 
             })
         }else{
-            folder = await this.prisma.folder.findFirst({
+            folder = await this.prisma.folder.findUnique({
                 where:{ id:folderId, isActive:true,
                     OR:[
                         {userId:user.sub },
@@ -479,21 +485,15 @@ export class FolderService{
 
     async removeUser(ruDTO:RemoveUserDTO,user:any){
         const {userId, folderId} = ruDTO
-        try{
 
-            return await this.prisma.collaborator.delete({
-                where:{
-                    folderId_userId:{
-                        userId,
-                        folderId
-                    }}
-                })
-        }catch(err:any){
-            if(err.code == 'P2025'){ //Record Not Found
-                console.log("Not Found Error")
-                throw new ConflictException("This user is not a collaborator in this folder")
-            }
-        }
+        return await this.prisma.collaborator.delete({
+            where:{
+                folderId_userId:{
+                    userId,
+                    folderId
+                }}
+            })
+
     }
 
 }

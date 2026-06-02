@@ -21,9 +21,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
-    "paths": {
-      "@/*": ["./src/*"]
-    },
+      "paths": {
+        "@/*": ["./src/*"]
+      },
+    "types": ["jest", "node"]
     // "ignoreDeprecations": "6.0"
   },
 }

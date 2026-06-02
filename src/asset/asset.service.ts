@@ -1,7 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException, UseGuards } from "@nestjs/common";
-import { S3Service } from "src/s3.service";
+import { S3Service } from "@/s3.service";
 import CreateAssetDTO from "./dtos/create-asset.dto";
-import { PrismaService } from "src/prisma.service";
+import { PrismaService } from "@/prisma.service";
 import { v4 as uuid } from 'uuid'
 import { EditAssetDTO } from "./dtos/edit-asset.dto";
 import { MoveToAssetDTO } from "./dtos/moveto-asset.dto";
@@ -11,8 +11,8 @@ import { DeleteATDTO } from "./dtos/delete-assettag.dto";
 @Injectable()
 export class AssetService{
     constructor(
-        private readonly s3Srv: S3Service,
         private readonly prisma: PrismaService,
+        private readonly s3Srv?: S3Service,
     ){}
 
     // Moved to Folder Service to avoid circular dependency
@@ -26,11 +26,11 @@ export class AssetService{
         }
         if(crAssetDto.type.split('/')[0] == 'video'){
 
-            const {signedUrl,fileKey} = await this.s3Srv.generateUploadUrl(crAssetDto.assetName,crAssetDto.type,assetUuid,'cover') //  The cover image will be generated in the frontend and uploaded with the same name but png extension
+            const {signedUrl,fileKey} = await this.s3Srv!.generateUploadUrl(crAssetDto.assetName,crAssetDto.type,assetUuid,'cover') //  The cover image will be generated in the frontend and uploaded with the same name but png extension
             assObj.thumbnailUrl = signedUrl
             assObj.thumbnailKey = fileKey
         }
-        const {signedUrl, fileKey} = await this.s3Srv.generateUploadUrl(crAssetDto.assetName, crAssetDto.type, assetUuid) //Example is the full image/png not just image
+        const {signedUrl, fileKey} = await this.s3Srv!.generateUploadUrl(crAssetDto.assetName, crAssetDto.type, assetUuid) //Example is the full image/png not just image
         let asset = await this.prisma.asset.create({
                 data: {
                     id: assetUuid,
@@ -47,7 +47,8 @@ export class AssetService{
                 })        
                 // 🚨Handle Tags with uploading
                 
-        return {asset, thumbnailUrl: assObj.thumbnailUrl? assObj.thumbnailUrl : null, videoUrl:signedUrl}
+                //Called mainUrl bec it can be for an image or a video
+        return {asset, thumbnailUrl: assObj.thumbnailUrl? assObj.thumbnailUrl : null, mainUrl:signedUrl}
 
     }
 
@@ -105,12 +106,35 @@ export class AssetService{
     }
 
     async getById(id:string, user:any){
+        let allowPublic:any
+        if(user.role =='admin')
+            allowPublic= {isPublic:undefined}
+        else
+            allowPublic= {isPublic:true}
+
         const asset = await this.prisma.asset.findUnique({
-            where: {id, isActive:true},
+            where: {id, isActive:true,
+                OR:[
+                    {mainFolder:null},
+                    {
+                        folder:{
+                            isActive:true,
+                            OR:[
+                                allowPublic,
+                                {userId: user.sub}
+                            ]
+                        }
+                    }
+                ]
+            },
         })
+        console.log(asset)
+
         if(!asset)
             throw new NotFoundException("Asset not found")
-        const viewUrl = await this.s3Srv.generateViewUrl(asset?.s3Key!)
+
+
+        const viewUrl = await this.s3Srv!.generateViewUrl(asset?.s3Key!)
         return {asset, viewUrl}
     }     
 
@@ -145,9 +169,10 @@ export class AssetService{
                 // Other attributes like fileSize and type can't be updated from the client
             },
         })
+        console.log(asset)
         // If the asset isn't found, what will prisma do? answer: it will throw an error that we can catch and convert to a not found exception
         // Is this the line that we catch? answer: yes, we can catch the error thrown by prisma and check if it's a not found error, then throw a NotFoundException
-        if(!asset)
+        if(!(asset instanceof Object))
             throw new NotFoundException("Asset not found")
 
         // ⚠️ The Media file can't be changed under the same asset, only the asset's data can be changed
@@ -159,26 +184,29 @@ export class AssetService{
 
         return asset
     }
+    
+    
 
     // Deletion
     async delete(id:string,user:any,fromFolder?:boolean){
         let asset = await this.prisma.asset.findUnique({ 
             where: {id, isActive:true}
         })
+        
         if(!asset)
             throw new NotFoundException("Asset not found")
         let result:any = {}
         //If we're calling the API from the folder methods, we need to check for the collaborators, which are outside this method's scope
-        if(!(asset.ownerId == user.sub || user.role =='admin') || !fromFolder)
+        if(!(asset.ownerId == user.sub || user.role =='admin') /*|| !fromFolder*/)
             throw new ForbiddenException("You are not the owner of this asset")
         else{// Delete the asset existance from db and any folders if exist, then from the s3
+            result.deleteUrl = await this.s3Srv!.generateDeleteUrl(asset.s3Key!)
+            if(asset.coverImage)
+                result.coverImageDeleteUrl = await this.s3Srv!.generateDeleteUrl(asset.coverImage)
                 asset = await this.prisma.asset.delete({
                     where: {id}
-                })
+                }) //⭐ Changed after unit testing
                 result.asset = asset
-            result.deleteUrl = await this.s3Srv.generateDeleteUrl(asset.s3Key!)
-            if(asset.coverImage)
-                result.coverImageDeleteUrl = await this.s3Srv.generateDeleteUrl(asset.coverImage)
         }
         
         //⭐Pintrest Opted for hard deletion
@@ -214,7 +242,7 @@ export class AssetService{
         const result = await Promise.all(
             assets.map(async ast =>({
                 ...ast,
-                viewUrl: await this.s3Srv.generateViewUrl(ast.s3Key!)
+                viewUrl: await this.s3Srv!.generateViewUrl(ast.s3Key!)
             }))
         )
         return result
@@ -259,5 +287,3 @@ export class AssetService{
         return tags
     }
 }
-
-
