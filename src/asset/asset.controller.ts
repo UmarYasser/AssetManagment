@@ -54,6 +54,7 @@ export class AssetController{
         return this.assetSrv.getByTag(tags)
     }
 
+    @AllowAnonymous()
     // @UseGuards(AuthGuard)
     @Get('getAll')
     async getAll(){

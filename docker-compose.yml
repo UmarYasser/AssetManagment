@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Your NestJS Application
+  web:
+    build: .
+    ports:
+      - "3000:3000" # NestJS default port
+    volumes:
+      - .:/usr/src/app # Syncs your code to the container
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/DAM
+    depends_on:
+      - db
+    command: npm run start:dev
+
+  # Your PostgreSQL Database
+  db: #This naming is like variables, can be called anything, it will be called like this bet other services
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: DAM
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
