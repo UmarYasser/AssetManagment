@@ -222,15 +222,15 @@ export class AssetService{
 
 
     // ====== Tags Shit ======
-    async getByTag(tags: string){ // what is type array in ts? answer:
-        const tagsArr = tags.split(',').map(tag => tag.trim())
+    async getByTag(tags: any){ // what is type array in ts? answer:
+        // const tagsArr = tags.split(',').map(tag => tag.trim())
         const assets = await this.prisma.asset.findMany({
             where:{
                 isActive:true,
                 assetTag:{
                     some:{
                         tag:{
-                            name:{in: tagsArr}
+                            name:{in: tags}
                         }
                     }
                 }

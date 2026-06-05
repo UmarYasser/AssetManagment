@@ -1,8 +1,11 @@
-import {Controller, Get, Post, Patch, Delete, Body, Param, Req, Query} from '@nestjs/common'
+import {Controller, Get, Post, Patch, Delete, Body, Param, Req, Query, UseInterceptors} from '@nestjs/common'
 import {UserService} from './users.service'
 import {CreateUserDto} from './dtos/create-user.dto'
 import { UpdateUserDTO } from './dtos/update-user.dto'
 import { Roles } from 'common/decotrators/roles.decorator'
+import { AllowAnonymous } from 'common/decotrators/allowanonymous.decorator'
+import { Cachable } from 'common/decotrators/cache.decorator'
+import { HttpCacheInterceptor } from 'common/interceptors/cache.interceptor'
 
 @Controller('users')
 export class UserController{
@@ -10,24 +13,27 @@ export class UserController{
         private readonly userSrv:UserService
     ){}
 
+    @AllowAnonymous()
     @Get('getAll')
     async getAll(){
         return this.userSrv.getAll()
     }
 
+    @UseInterceptors(HttpCacheInterceptor)
+    @Cachable('user')
     @Get('getOne/:id')
     async getById(@Param('id') id:string, @Req() req:any){
         return this.userSrv.getOne(id,req.user)
     }
 
 
-    @Patch('updateMe')
+    @Patch('updateMe/:id')
     async update(@Param('id') id:string, @Body() body:UpdateUserDTO, @Req() req:any){
         return this.userSrv.updateMe(id,body)
     }
 
     @Roles(['admin'])
-    @Patch('upateUser/:id')
+    @Patch('updateUser/:id')
     async updateUser(@Param('id') id:string, @Body() body:UpdateUserDTO, @Req() req:any){
         return this.userSrv.updateUser(id,body,req.user)
     }

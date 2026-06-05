@@ -58,7 +58,6 @@ export class AuthGuard implements CanActivate {
 
       request['user'] = payload;
       const roles = this.reflector.get(Roles, context.getHandler());
-      console.log("🌟Required roles for this route:", roles)
       if (!roles) {
         return true; // No roles required, allow access
     }

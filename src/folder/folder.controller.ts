@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FolderService } from "./folder.service";
 import { CreateFolderDTO } from "./dtos/create-folder.dto";
 import { UpdateFolderDTO } from "./dtos/update-folder.dto";
@@ -11,6 +11,8 @@ import { AFCreateDTO } from "@/folder/dtos/afcreate.dto";
 import { AFRemoveFromDTO } from "@/folder/dtos/afRemove.dto";
 import { CreateCollabDTO } from "@/folder/dtos/create-collab.dto";
 import { RemoveUserDTO } from "@/folder/dtos/remove-user.dto";
+import { HttpCacheInterceptor } from "common/interceptors/cache.interceptor";
+import { Cachable } from "common/decotrators/cache.decorator";
 
 @Roles(['admin'])
 @Controller('folder')
@@ -60,6 +62,8 @@ export class FolderController{
         return await this.folderSrv.getById(id, req.user)
     }
     
+    @UseInterceptors(HttpCacheInterceptor)
+    @Cachable('folder')
     @Roles(['user'])
     @UseGuards(AuthGuard)
     @Get('getByFolder/:id')

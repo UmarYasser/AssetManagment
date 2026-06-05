@@ -4,10 +4,11 @@ import { UserService } from './users.service';
 import BcryptProvider from 'src/auth/providers/bcrypt.provider';
 import { PrismaService } from 'src/prisma.service';
 import { ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Module({
     controllers:[UserController],
     providers:[UserService,PrismaService,ConfigService],
-    exports:[UserService]
+    exports:[UserService],
 })
 export class UsersModule {}

@@ -1,5 +1,7 @@
 Design Patterns:
 Startegy(HashingProvider) 
+Decorator(Caching)
+
 
 AWS S3 Bucket:
 **Object Ownership**: To have access to all objects uploaded by anybody

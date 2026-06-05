@@ -4,16 +4,23 @@ WORKDIR /app
 
 COPY package.json ./
 
-RUN npm install
+RUN npm install 
 
-COPY . .
+#One dot for the cuurent directory, the other is for the directory inside the container
+COPY . . 
+
+RUN npm run build
+
+RUN npx prisma generate
 
 ENV PORT=3000
 
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD [ "npm", "start"]
 
+
+#4/6 Stopped at migrating the files into the container's db
 
 # Docker Steps After the docker file
 # 0..dockerignore the node_modules

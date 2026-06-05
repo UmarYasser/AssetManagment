@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards, UseInterceptors } from "@nestjs/common";
 import CreateAssetDTO from "./dtos/create-asset.dto";
 import { AssetService } from "./asset.service";
 import { AuthGuard } from "common/guards/auth.guard";
@@ -9,6 +9,8 @@ import { CreateATDTO } from "@/asset/dtos/create-assettag.dto";
 import { DeleteATDTO } from "./dtos/delete-assettag.dto";
 import { Roles } from "common/decotrators/roles.decorator";
 import { ConfigService } from "@nestjs/config";
+import { HttpCacheInterceptor } from "common/interceptors/cache.interceptor";
+import { Cachable } from "common/decotrators/cache.decorator";
 
 
 
@@ -47,13 +49,7 @@ export class AssetController{
         return this.assetSrv.getById(id,req.user)
     }
 
-    @UseGuards(AuthGuard)
-    @Get('getByTag')
-    async getByTag(@Query("tags") tags:any){
-        console.log(`tags:${tags}`)
-        return this.assetSrv.getByTag(tags)
-    }
-
+    
     @AllowAnonymous()
     // @UseGuards(AuthGuard)
     @Get('getAll')
@@ -68,24 +64,35 @@ export class AssetController{
     async edit(@Param('id') id:string,@Body() editAssetDTO: EditAssetDTO, @Req() req:any){
         return await this.assetSrv.edit(editAssetDTO,id,req.user)
     }
-
+    
     // Soft Deletion
     @Delete('delete/:id')
     async delete(@Param('id') id:string, @Req() req:any){
         return await this.assetSrv.delete(id,req.user)
     }
-
-//================= Tags Junction Table Methods =================
+    
+    //================= Tags Junction Table Methods =================
     //🚨See Pintrest if tags can be added/removed after asset creation
     @Post('linkTag')
     async link(@Body() catDTO:CreateATDTO){
         return await this.assetSrv.link(catDTO)
     }   
-
+    
     @Get('getAllTags')
     async getAllByTags(){
         return this.assetSrv.getAll()
     }
+    
+    @UseInterceptors(HttpCacheInterceptor)
+    @Cachable('assetByTag')
+    @UseGuards(AuthGuard)
+    @Get('getByTag')
+    async getByTag(@Query("tags") tags:any){
+        console.log(`tags:${tags}`)
+        return this.assetSrv.getByTag(tags)
+    }
+
+    
 
     @Get('getByAsset/:id')
     async getByAsset(@Param('id') id:string){

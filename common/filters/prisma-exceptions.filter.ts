@@ -16,7 +16,6 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
 
     const errorName = exception?.name || exception?.constructor?.name;
     let errorCode:string|undefined = exception.code
-    console.log(`Error Code: ${errorCode}`)
     // 1. Handle Prisma Validation Errors (Missing fields, bad types)
     if (errorName === 'PrismaClientValidationError') {
       return response.status(HttpStatus.BAD_REQUEST).json({
@@ -45,6 +44,14 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
           statusCode: HttpStatus.NOT_FOUND,
           error: 'Not Found',
           message: `The Resource Requested isn't found to be updated or deleted.`,
+        });
+    }
+
+    if(errorCode === "P2021"){
+        return response.status(HttpStatus.NOT_FOUND).json({
+          statusCode: HttpStatus.NOT_FOUND,
+          error: 'Not Found',
+          message: `The Resource Requested isn't found.`,
         });
     }
 

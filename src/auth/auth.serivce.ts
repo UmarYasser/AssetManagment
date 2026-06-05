@@ -26,7 +26,7 @@ export class AuthService{
         const {confirmPassword, ...reqBody} = body
         // try{
 
-            const user = await this.prisma.user.create({
+            let user = await this.prisma.user.create({
                 data: {...reqBody, password: hashedPassword},
                 select:{
                     id: true, // 👈 Required for generateTokens, but now in the response
@@ -42,7 +42,8 @@ export class AuthService{
 
             // Make a default folder called 'saved'
             const folderDTO:CreateFolderDTO = {folderName:"Saved"}
-            const savedFolder = await this.folderSrv.create(folderDTO,user)
+            const userF = {sub:user.id}
+            const savedFolder = await this.folderSrv.create(folderDTO,userF)
 
             return {
                 ...dataRes,

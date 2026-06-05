@@ -9,6 +9,7 @@ export class AppController {
   @AllowAnonymous()
   @Get('/')
   getHello(): string {
+    console.log('Hello World From docker compose!');
     return this.appService.getHello();
   }
 }

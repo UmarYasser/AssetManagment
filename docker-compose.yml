@@ -1,28 +1,50 @@
-version: '3.8'
-
 services:
   # Your NestJS Application
   web:
     build: .
     ports:
       - "3000:3000" # NestJS default port
+    tty: true
     volumes:
-      - .:/usr/src/app # Syncs your code to the container
+      - .:/app:delegated # Syncs your code to the container
+      - /app/node_modules
     environment:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/DAM
+      - PATH=/app/node_modules/.bin:$PATH
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
     depends_on:
-      - db
-    command: npm run start:dev
+      db:
+        condition: 'service_healthy'  # Tells the docker to wait for db to start, without it ,the app will crash bec it can't find an db with that db_url
+    command: ["sh", "-c", "prisma migrate deploy && npm run start:dev --watch"]
+    
 
   # Your PostgreSQL Database
   db: #This naming is like variables, can be called anything, it will be called like this bet other services
     image: postgres:13
     restart: always
+    user: '0:0' # Run as root to avoid permission issues with mounted volumes
     environment:
-      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: DAM
     ports:
       - "5432:5432"
     volumes:
-      - ./db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  db-data:  
+  redis-data:
