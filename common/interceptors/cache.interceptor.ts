@@ -20,7 +20,10 @@ export class HttpCacheInterceptor implements NestInterceptor {
     // folder/getOne/123 => modelName = folder, kp = getOne, id= 123
     const modelName = context.getClass().name.replace('Controller', '').toLowerCase() // folder
     const method =  context.getHandler().name // getOne
-    let cacheKey;
+    let cacheKey:string;
+    let userSpec:string;
+
+    // if( method is specfic to a user)
     if(request.query && Object.keys(request.query).length > 0){
       const queryKey = Object.keys(request.query).sort().map(k => `${k}=${request.query[k]}`).join('_') // tags=tag1,tag2&other=val
       cacheKey = `${modelName}:${method}:${queryKey}`; // folder:assetByTag:123
