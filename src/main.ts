@@ -6,7 +6,7 @@ import { PrismaClientExceptionFilter } from 'common/filters/prisma-exceptions.fi
 //🚨Make a global prisma exception handler
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.setGlobalPrefix('/api/v1')
+  // app.setGlobalPrefix('/api/v1')
     
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true,
