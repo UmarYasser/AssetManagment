@@ -1,7 +1,7 @@
 import { PrismaService } from "src/prisma.service";
 import HashingProvider from "./providers/hashing.provider";
 import { ConfigService } from "@nestjs/config";
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, Res, UnauthorizedException } from "@nestjs/common";
 import { TokenService } from "src/token/token.service";
 import { AllowAnonymous } from "common/decotrators/allowanonymous.decorator";
 import { FolderService } from "@/folder/folder.service";
@@ -17,7 +17,7 @@ export class AuthService{
         private readonly configSrv:ConfigService
     ){}
 
-    async signup(body){
+    async signup(body,@Res({passthrough:true}) res:any){
         const hashedPassword = await this.hashingPrv.hash(body.password)
         // 🌟We don't want the confirmPassword here, so we stripe it and use the rest opretor; the cleanest 'mid-level' way
         if(body.confirmPassword !== body.password)
@@ -44,7 +44,14 @@ export class AuthService{
             const folderDTO:CreateFolderDTO = {folderName:"Saved"}
             const userF = {sub:user.id}
             const savedFolder = await this.folderSrv.create(folderDTO,userF)
-
+            console.log("The saved folder is: ",savedFolder)
+            res.cookie('jwt', token.accessT,{
+                secure:false, //🚨Must be changed when switching to HTTPS
+                httpOnly:true,
+                sameSite:'lax',
+                maxAge: 3600000,
+            })
+            
             return {
                 ...dataRes,
                 ...token,
@@ -57,11 +64,34 @@ export class AuthService{
         // }
     }
 
-    async login(body){
+    async login(body,@Res({passthrough:true}) res:any){
         const user = await this.prisma.user.findUnique({
-            where:{email: body.email}
-        })
+            where: { email: body.email },
+            include: {
+                folders: {
+                    where: { isActive: true },
+                    select: {
+                        id: true,
+                        userId: true,
+                        folderName: true,
+                        assetFolder: {
+                            take: 2,
+                            include: {
+                                asset: {
+                                    select: {
+                                        s3Key: true, // Assuming this is your image path
+                                        assetName: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
+
+        const folders = user?.folders
         if(!user) 
             throw new UnauthorizedException('The email or password are incorrect')
         
@@ -71,10 +101,21 @@ export class AuthService{
             throw new UnauthorizedException('The email or password are incorrect')
         
         const tokens = await this.tokenSrv.generateTokens({sub:user.id,email:user.email,role:user.role})
+        
+        res.cookie('jwt', tokens.accessT,{
+                secure:false,
+                // httpOnly:true,
+                sameSite:'lax',
+                maxAge: 24*60*60*1000,
+        })
+
+        
         return {
+            id:user.id,
             name:user.name,
             email:user.email,
             role:user.role,
+            folders,
             password: this.configSrv.get("NODE_ENV") == 'development' ? user.password : undefined,
             ...tokens
         }

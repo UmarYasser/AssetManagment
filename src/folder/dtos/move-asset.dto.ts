@@ -1,11 +1,11 @@
-import { IsAlpha, IsNotEmpty, IsUUID } from "class-validator";
+import { IsAlpha, IsNotEmpty, IsString } from "class-validator";
 
 export class MoveAssetDTO{
-    @IsUUID()
+    @IsString()
     @IsNotEmpty()
     assetId!: string;
     
-    @IsUUID()
+    @IsString()
     @IsNotEmpty()
     folderId!:string;
 }

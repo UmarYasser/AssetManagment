@@ -39,6 +39,15 @@ TO join m-m relationships tables
 1-Include the junction table relaiton, then include the 2nd tabls from it again                      
 
 
+⭐15/9: How to mark a  migration as resolved to continue other migrations:
+  npx prisma migrate resolve --applied "mig_name"
+
+⭐⭐If it tell you to "Drift detected: Your database schema is not in sync with your migration history."
+Delete these migrations from the the _prisma_migrations table [DELETE FROM in the db container]
+and *npx prisma migrate* and it will add it automatically
+
+
+
 Design Patterns: 
 Strategy : HashingProvider ✅
 Composite: Folder/file Structure

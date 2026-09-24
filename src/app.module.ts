@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -15,9 +15,23 @@ import { PrismaService } from './prisma.service';
 import { PrismaClientExceptionFilter } from 'common/filters/prisma-exceptions.filter';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
+import { Pages } from './PagesController';
 
+console.log(join(__dirname, '..', 'Public'))
 @Module({
-  imports: [UsersModule, AuthModule,
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', '..', 'Public'), // Path to your static files
+      // exclude: [ '/api/(.*)'], // Exclude API routes from being served as static files
+      serveStaticOptions:{
+        extensions:['html','css','js'],
+        fallthrough:true
+      },
+      serveRoot: '/', // URL path to access the static files
+    }),        
+    UsersModule, AuthModule,
     TokenModule,
     AssetModule,
     FolderModule,
@@ -32,9 +46,9 @@ import { redisStore } from 'cache-manager-redis-yet';
       port: 6379,
       host: process.env.REDIS_HOST || 'localhost',
       ttl: 600, // Cache TTL in seconds
-    })
-  ],
-  controllers: [AppController],
+    }),
+  ], 
+  controllers: [AppController,Pages], 
   providers: [AppService,JwtService,PrismaService,
     {
       provide: APP_GUARD,
@@ -42,7 +56,7 @@ import { redisStore } from 'cache-manager-redis-yet';
     },
     {
       provide: APP_FILTER,
-      useClass: PrismaClientExceptionFilter
+      useClass: PrismaClientExceptionFilter 
     },
   ],
   exports:[CacheModule]

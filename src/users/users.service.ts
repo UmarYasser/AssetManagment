@@ -21,14 +21,34 @@ export class UserService{
         })
     }
     
-    async getOne(id:string,user:any){
-        return this.prisma.user.findUnique({where: {id,
-            isActive:user.role == 'admin' ? undefined : true
-        }})
+    async getOne(id:string,user:any,option?:any){
+        let userFound:any
+        if(option?.option == 'own'){
+
+            userFound =  await this.prisma.user.findUniqueOrThrow({
+                where: {
+                    id,
+                    isActive:user.role == 'admin' ? undefined : true
+                },
+                select:{ id: true ,name:true,email:true,pphoto_key:true}
+            })
+        }else{
+
+            userFound =  await this.prisma.user.findUniqueOrThrow({
+                where: {
+                    id,
+                    isActive:user.role == 'admin' ? undefined : true
+                },
+                select:{ name:true,email:true,pphoto_key:true}
+            })
+
+        }
+
+        return userFound
     }
     
     async getOneT(id:string){
-        return this.prisma.user.findUnique({where: {id,
+        return this.prisma.user.findUniqueOrThrow({where: {id,
             isActive: true
         }})
     }

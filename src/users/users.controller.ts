@@ -22,8 +22,12 @@ export class UserController{
     @UseInterceptors(HttpCacheInterceptor)
     @Cachable('user')
     @Get('getOne/:id')
-    async getById(@Param('id') id:string, @Req() req:any){
-        return this.userSrv.getOne(id,req.user)
+    async getById(@Param('id') id:string, @Req() req:any, @Query() option?:any){
+        if(id== 'me'){
+            id=req.user.sub; 
+            console.log("THe user is viewing himself")
+        }
+        return this.userSrv.getOne(id,req.user,option)
     }
 
 

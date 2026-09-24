@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Page — Pinboard</title>
+  <link rel="stylesheet" href="/Creator/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- ========== END styles.css ========== -->
+
+</head>
+<body>
+
+  <!-- ========== START index.html (body) ========== -->
+
+  <!-- Navbar -->
+<nav class="navbar">
+    <div class="nav-logo">
+      <iconify-icon icon="mdi:pinterest" width="24" fill-color="#ddc364"></iconify-icon>
+    </div>
+    <a class="nav-btn nav-btn--home" href="/home">
+      <iconify-icon icon="mdi:home" width="18"></iconify-icon>
+      <span>Home</span>
+    </a>
+    <a class="nav-btn" id="createBtn" href="/create">
+      <i class="fa-regular fa-square-plus fa-xl"></i>
+      <span>Create</span>
+    </a>
+    <a class="nav-btn" id="yoursBtn" href="/creator/?user=me">
+      <i class="fa-regular fa-square-plus fa-xl"></i>
+      <span>Yours</span>
+    </a>
+    <input type="text" class="nav-search" placeholder="Search for easy dinners, fashion, etc." id="searchInput">
+    <div class="nav-spacer"></div>
+<div id="notifBtn" class="nav-icon-btn" title="Notifications" onclick="showToast('No new notifications')">
+      <iconify-icon icon="mdi:bell-outline" width="22" style="pointer-events: none;"><template shadowrootmode="open"><style data-style="data-style">:host{display:inline-block;vertical-align:0}span,svg{display:block}</style><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"><path fill="currentColor" d="M10 21h4c0 1.1-.9 2-2 2s-2-.9-2-2m11-2v1H3v-1l2-2v-6c0-3.1 2-5.8 5-6.7V4c0-1.1.9-2 2-2s2 .9 2 2v.3c3 .9 5 3.6 5 6.7v6zm-4-8c0-2.8-2.2-5-5-5s-5 2.2-5 5v7h10z"></path></svg></template></iconify-icon>
+      <div id="notifList">
+    <div class="notifItem">
+        <p class="notifTitle">New Asset </p>
+        <span class="notifText"> Here's a new asset we bet you will like</span>
+    </div>
+    
+</div>
+      <span class="nav-badge">3</span>
+    </div>
+    <button class="nav-icon-btn" title="Messages" onclick="showToast('No new messages')">
+      <iconify-icon icon="mdi:message-outline" width="22"></iconify-icon>
+    </button>
+
+    <div  id="myPageBtn" title="My Page">
+      <img id="myPageImg">
+    </div>
+  </nav>
+
+  <!-- Layer 1: Profile Header -->
+  <header class="profile-header">
+    <h1 class="profile-header__title">Your saved ideas</h1>
+    <div class="profile-header__right">
+      <button class="profile-header__btn" onclick="showToast('Settings coming soon')">
+        <iconify-icon icon="mdi:cog-outline" width="14" style="vertical-align: -2px; margin-right: 4px;"></iconify-icon>
+        Settings
+      </button>
+      <img id="userPhoto"
+        alt="User avatar"
+        class="profile-header__avatar"
+      >
+      <div id="UPPen"><i class="fa-solid fa-pen"></i></div>
+      <div>
+        <div class="profile-header__name" id="userName">...</div>
+      </div>
+      <div id="changeUPCon" > 
+       <input type="file" id="changeUPFile" hidden accept ="image/*"> 
+        <p id="changeUP">Tap to change photo</p>
+    </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button id="savedTab" class="tab tab--active" data-tab="saved" onclick="switchTab(this)">Saved</button>
+    <button id="createdTab" class="tab" data-tab="created" onclick="switchTab(this)">Created</button>
+  </div>
+
+  <!-- Layer 2: Folders Grid -->
+  <main class="folders-grid" id="foldersGrid">
+    <!-- Rendered by JS -->
+     <!-- <div id="addFolder" class="folderCard">
+      <i class="fa-regular fa-square-plus fa-xl"></i>
+      <p> Add Folder</p>
+      <form id="addFolderForm" >
+        <input type="text" name="folderName" id="folderName" placeholder="Enter Folder Name...">
+        <p>Is it Public?</p>
+        <div id="radioCon">
+          <label style="display:inline">
+            <input type="radio" name="isPublic" value="true" checked>
+              Yes
+          </label>
+          <label style="display:inline">
+            <input type="radio"name="isPublic" value="false">
+              No
+          </label>
+        </div>
+        <div id="submitForm">Create Folder</div>
+      </form>
+    </div> -->
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+
+  <script src="/Creator/app.js"></script>
+  <!-- ========== END script.js ========== -->
+
+</body>
+</html>
+

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social App - Login</title>
+  <link rel="stylesheet" href="/Login/style.css">
+</head>
+<body>
+  <div class="container">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+      </div>
+
+      <!-- LOGIN FORM -->
+      <form class="form-wrapper" id="loginForm">
+        <div class="form-group">
+          <label for="loginUser">Username</label>
+          <input type="text" id="loginUser" placeholder="Enter your username" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPass">Password</label>
+          <input type="password" id="loginPass" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn-primary">Login</button>
+        <p class="switch-text">Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
+      </form>
+
+      <!-- SIGNUP FORM (hidden by default) -->
+      <form class="form-wrapper hidden" id="signupForm">
+        <div class="form-group">
+          <label for="signupUser">Name</label>
+          <input type="text" name='name' id="signupUser" placeholder="Choose a username" required>
+        </div>
+
+        <div class="form-group">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="Enter your email" required>
+        </div>
+        <div class="form-group">
+          <label for="signupPass">Password</label>
+          <input type="password" id="signupPass" placeholder="Create a password" required>
+        </div>
+        <div class="form-group">
+          <label for="signupConfirmPass">Confirm Password</label>
+          <input type="password" id="signupConfirmPass" placeholder="Confirm your password" required>
+        </div>
+        <button type="submit" class="btn-primary">Sign Up</button>
+        <p class="switch-text">Already have an account? <a href="#" id="showLogin">Log in</a></p>
+      </form>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+      <nav class="right-nav">
+        <a href="#" class="nav-link">About</a>
+        <a href="#" class="nav-link">Features</a>
+        <a href="#" class="nav-link">Contact</a>
+        <a href="#" class="btn-start" id="startNow">Start Now</a>
+      </nav>
+      <div class="welcome-text">
+        <h1>Welcome.</h1>
+        <p>Connect with people who share your interests. Simple, fast, and beautiful.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/Login/app.js"></script>
+</body>
+</html>

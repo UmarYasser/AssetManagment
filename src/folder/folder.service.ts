@@ -1,5 +1,5 @@
 import { PrismaService } from "@/prisma.service";
-import { ConflictException, ForbiddenException, Injectable, NotFoundException, Req, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException, Req, UnauthorizedException } from "@nestjs/common";
 import { CreateFolderDTO } from "./dtos/create-folder.dto";
 import { UpdateFolderDTO } from "./dtos/update-folder.dto";
 import { MoveFolderDTO } from "./dtos/move-folder.dto";
@@ -7,8 +7,9 @@ import { AssetService } from "@/asset/asset.service";
 import { MoveAssetDTO } from "./dtos/move-asset.dto";
 import { ConfigService } from "@nestjs/config";
 import { RemoveUserDTO } from "@/folder/dtos/remove-user.dto";
-import { contains } from "class-validator";
-import { ModelName } from "generated/prisma/internal/prismaNamespace";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import type { Cache } from "cache-manager";
+
 
 //
 @Injectable()
@@ -17,6 +18,7 @@ export class FolderService{
         private readonly prisma: PrismaService,
         private readonly assetSrv: AssetService,
         private readonly configSrv: ConfigService,
+         @Inject(CACHE_MANAGER) private cacheMng:Cache
     ){}
 
     // Remove the idea of folder inside folder like PC file explorer
@@ -61,6 +63,7 @@ export class FolderService{
                 collaborator: { where: {userId:user.sub} }
             }
         })
+
         if(!folder)
             throw new NotFoundException("Folder not found")
             
@@ -68,18 +71,15 @@ export class FolderService{
         let asset = await this.prisma.asset.findUnique({
             where:{ id:assetId, isActive:true}
         })
+
         if(!asset)
             throw new NotFoundException("Asset not found")
         
-        // Let Collaborators have permission to move assets
-        // const collabs = await this.collabSrv.getByFolderId(folderId,user)
-        // const collabsIDs = collabs.map((c) => c.userId)
-        // console.log(`Folder Collabs, Should be able to move assets: ${collabs}`)
 
         // Either the owner, an admin or a collaborator only
         let haveAccess = (folder.userId == user.sub || user.role =='admin' /*|| collabsIDs.includes(user.sub)*/)
+        let devMsg:string|undefined = `User ${user.sub} is trying to move an asset to folder with owner id ${folder.userId}`
         if(!haveAccess){
-            let devMsg:string|undefined = `User ${user.sub} is trying to move an asset to folder with owner id ${folder.userId}`
             if(this.configSrv.get('NODE_ENV') == 'production') 
                 devMsg = undefined
             throw new ForbiddenException(`You don't have the access to this asset \n${devMsg}`)
@@ -96,6 +96,8 @@ export class FolderService{
         }
         const af = await this.addToFolder(asset,folder,isowner)
 
+        const cacheKey = `folder:getByFolder:${folderId}`
+        await (this.cacheMng as any).del(cacheKey)
         return af
     }
 
@@ -103,8 +105,23 @@ export class FolderService{
         const folder = await this.prisma.folder.create({
             data:{...crFolderDto, userId: user.sub}
         })
+        const allfolders = await this.prisma.folder.findMany({
+            where:{isActive:true, userId:user.sub},
+            include:{
+                assetFolder:{
+                    include:{
+                        asset:{
+                            select:{
+                                assetName:true,
+                                s3Key:true
+                            }
+                        }
+                    }
+                }
+            }
+        })
 
-        return folder
+        return {folder,allfolders}
     }
 
     async searchFolder(name:string,user:any){
@@ -126,7 +143,7 @@ export class FolderService{
 
     async getByFolder(id:string,user:any){
         const folder = await this.prisma.folder.findUnique({
-            where: {id ,isActive:true,},
+            where: {id ,isActive:true},
             include:{
                 assetFolder:{
                     include:{
@@ -136,7 +153,6 @@ export class FolderService{
             }
             
         })
-
         if(!folder)
             throw new NotFoundException("Folder not found")
 
@@ -160,33 +176,31 @@ export class FolderService{
     }
 
     async getByUser(userId:string,user:any){
-        // const collabs = await this.collabSrv.getByUserId(userId)
-        // const collabsIDs = collabs.collabs.map((c) => c.folder.id)
-        // console.log(`User Collaboratoins: ${collabsIDs}`)
-        // Allow 
-        let letPrivate = (user.role == 'admin' || user.sub == userId)
-        console.log(`Is private folders allowed? ${letPrivate}`)
+        let letPrivate = (user.role == 'admin' || user.sub == userId) 
+        console.log(`Is private folders allowed? ${letPrivate ? true : false}`)
+        
 
+        const folders = await this.prisma.$queryRaw`
+            SELECT DISTINCT ON  (a.id) f.id as "id", f."folderName", a."s3Key", a."assetName"
+            FROM folders as f
+            LEFT JOIN assetfolders as af ON af."folderId" = f.id
+            LEFT JOIN assets as a ON af."assetId" = a.id
 
-        const folders = await this.prisma.folder.findMany({
-            where:{
-                OR:[
-                    {userId:userId},// Either The user created the folder
-                    { collaborator: {some: {userId:userId} } } // Or it appears in collaborations
-                    //👆 Joins the junction table and searchs in it
-                ], 
-                isActive:true,
-                isPublic:letPrivate ? undefined : true 
-            },
-            select:{
-                id:true,
-                folderName:true,
-                isPublic:true,
-                userId:true
-            }
-        })
+            WHERE f."isActive" = true AND (
+                f."userId" = ${userId}
+                OR EXISTS(
+                    SELECT 1 from collaborators as cb
+                    WHERE cb."folderId" = 	f.id
+                    AND cb."userId" = ${userId}
+                )
+            ) AND (${letPrivate}::boolean = true OR f."isPublic" = true)
 
-        return folders
+            LIMIT 1
+        `
+        console.log(`Folders:`, folders)
+        const coverImage = ''
+        console.log(`Folders found for user ${userId} By ${user.sub}: ${folders}`)
+        return {folders,coverImage}
     }
 
     //✅Implement that if the folder isPulic = false, to check if the req.user.sub is the same as the userId
@@ -244,7 +258,7 @@ export class FolderService{
     }
 
     async deleteFolder(id:string,user:any){
-        const folder = await this.prisma.folder.findUnique({
+        let  folder = await this.prisma.folder.findUnique({
             where: {id, isActive:true}  
         })
 
@@ -258,7 +272,12 @@ export class FolderService{
         const haveAccess = !(folder.userId == user.sub || user.role == 'admin' )
         if(haveAccess)
             throw new UnauthorizedException("You are not authorized to delete this folder")
+        
 
+        folder = await this.prisma.folder.update({
+            where:{id},
+            data:{isActive:false}
+        })
         return folder
     }
 
@@ -392,6 +411,8 @@ export class FolderService{
                 }
             }
         })
+        const cacheKey = `folder:getByFolder:${folderId}`
+        await (this.cacheMng as any).del(cacheKey)
         return af
     }
 

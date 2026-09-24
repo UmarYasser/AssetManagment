@@ -20,6 +20,14 @@ export default class CreateAssetDTO{
     @IsString()
     @IsOptional()
     mainFolder?: string;
+    
+    @IsNumber()
+    @IsNotEmpty()
+    width!: number; 
+    
+    @IsNumber()
+    @IsNotEmpty()
+    height!: number; 
 
     @IsNumber()
     @IsNotEmpty()

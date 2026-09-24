@@ -11,10 +11,11 @@ import { Roles } from "common/decotrators/roles.decorator";
 import { ConfigService } from "@nestjs/config";
 import { HttpCacheInterceptor } from "common/interceptors/cache.interceptor";
 import { Cachable } from "common/decotrators/cache.decorator";
+import { EmbeddingDTO } from "./dtos/embedding.dto";
 
 
 
-@Controller('asset')
+@Controller('assets')
 export class AssetController{
     constructor(
         private readonly assetSrv: AssetService,
@@ -30,18 +31,47 @@ export class AssetController{
     //✅ API: SaveAsset 
     //✅ Add covers to asset
     
+    @AllowAnonymous()
+    @Post('fetchImages')
+    async fetchImages(@Body() keys, @Query() option){
+        return await this.assetSrv.fetchImages(keys,option.option)
+    }
+
     @UseGuards(AuthGuard)
     @Roles(['user'])
     @Post('upload') //❓ How to handle a file upload
-    async upload(@Body() createAssetDto : CreateAssetDTO, @Req() req:any){
-        return this.assetSrv.upload(createAssetDto, req.user.id || req.user.sub)
+    async upload(@Body() createAssetDto : CreateAssetDTO, @Req() req:any, @Query() option?:any){
+        return await this.assetSrv.upload(createAssetDto, req.user.id || req.user.sub, option)
     }
 
-    @Get('search')
-    async search(@Query('name') name:string,@Req() req:any){
-        console.log(`User's Role: ${JSON.stringify(req.user)}`)
-        return await this.assetSrv.search(name,req.user)
+    @UseGuards(AuthGuard)
+    @Roles(['user'])
+    @AllowAnonymous()
+    @Post('addEmbedding') //❓ How to handle a file upload
+    async addEmbedding(@Body() embeddingDto:EmbeddingDTO, @Req() req?:any){
+        return await this.assetSrv.addEmbedding(embeddingDto, req?.user?.id || req?.user?.sub)
     }
+
+    @AllowAnonymous()
+    @Get('hybridSearch')
+    async hybridSearch(@Query('name') name:string,@Req() req:any){
+        console.log(`User's Role: ${JSON.stringify(req.user)}`)
+        return await this.assetSrv.hybridSearch(name,req.user)
+    }
+
+    @AllowAnonymous()
+    @Get('searchImage')
+    async searchImage(@Query('name') name:string,@Req() req:any){
+        console.log(`User's Role: ${JSON.stringify(req.user)}`)
+        return await this.assetSrv.searchImage(name,req.user)
+    }   
+
+    @AllowAnonymous()
+    @Get('searchText')
+    async searchText(@Query('name') name:string,@Req() req:any){
+        console.log(`User's Role: ${JSON.stringify(req.user)}`)
+        return await this.assetSrv.searchText(name,req.user)
+    }   
 
     @UseGuards(AuthGuard)
     @Get('getById/:id')
@@ -52,12 +82,29 @@ export class AssetController{
     
     @AllowAnonymous()
     // @UseGuards(AuthGuard)
+    @Get('getAllData')
+    async getAllData(){
+        if(this.configSrv.get('NODE_ENV') =='development')
+            return this.assetSrv.getAllData()
+        else
+            return {msg:"Only in development"}
+    }
+    
+    @AllowAnonymous()
+    // @UseGuards(AuthGuard)
     @Get('getAll')
     async getAll(){
         if(this.configSrv.get('NODE_ENV') =='development')
             return this.assetSrv.getAll()
         else
             return {msg:"Only in development"}
+    }
+
+    @AllowAnonymous()
+    @Roles(['user'])
+    @Get('getByUser')
+    async getByUser(authorId:string,@Req() req:any){
+        return await this.assetSrv.getByUser(authorId,req.user)
     }
 
     @Patch('edit/:id') // For metadata and file path since it's just an attribute in

@@ -1,133 +1,129 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-  moduleFormat = "cjs" // 👈 Add this line!
+  provider        = "prisma-client"
+  output          = "../generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
+  moduleFormat    = "cjs"
 }
 
 datasource db {
-  provider = "postgresql"
-}
-
-enum ROLE{
-  user
-  admin
+  provider   = "postgresql"
+  extensions = [vector(schema: "public")]
 }
 
 model User {
-  id  String @id @default(uuid())
-  name String  
-  email String @unique
-  password String
-  createdAt DateTime @default(now())   
-  tokens Token[]
-  folders Folder[] @relation("author")
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  password     String
+  createdAt    DateTime       @default(now())
+  isActive     Boolean        @default(true)
+  role         ROLE           @default(user)
   collaborator Collaborator[] @relation("collabs")
-  isActive Boolean @default(true)
-  role ROLE @default(user)
-  @@map("users") // 👈Tells prismma call it User in vscode while users in pgadmin
+  folders      Folder[]       @relation("author")
+  tokens       Token[]
+  pphoto_key String @default("pphoto/generic_pphoto.png")
+  @@map("users")
 }
 
-model Token{
-  id String @id @default(uuid())
-  token String @unique
-  expireAt DateTime 
-  isVaild Boolean @default(true)
-  userId String
-  user User @relation(fields: [userId], references: [id])
+model Token {
+  id       String   @id @default(uuid())
+  token    String   @unique
+  expireAt DateTime
+  isVaild  Boolean  @default(true)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
 
   @@map("tokens")
 }
 
-enum AssetType{
-  IMAGE
-  VIDEO
-}
-
-model Asset{
-  id String @id @default(uuid())
-  assetName String 
-  type AssetType 
-  ownerId String
+model Asset {
+  id          String                 @id @default(uuid())
+  assetName   String
+  type        AssetType
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
   description String
-  coverImage String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  isActive Boolean @default(true)
-  s3Key String
-  fileSize Int
-  mainFolder String?
-  
-  folder Folder? @relation("mainFolder", fields:[mainFolder], references:[id])
-  assetFolder AssetFolder[] @relation("afJoin")
+  isActive    Boolean                @default(true)
+  fileSize    Int
+  s3Key       String
+  ownerId     String
+  coverImage  String?
+  mainFolder  String?
+  width       Int
+  height      Int
+  embedding   Unsupported("vector(512)")?
+  assetFolder AssetFolder[]          @relation("afJoin")
+  folder      Folder?                @relation("mainFolder", fields: [mainFolder], references: [id])
+  assetTag    AssetTag[]             @relation("AssetTag")
 
-  assetTag AssetTag[] @relation("AssetTag")
   @@map("assets")
-
-  //=> Add s3Key, coverImage
-  //=> Remove isActive? Pintrest performs hard deletion
 }
 
-model Tag{
-  id Int @id @default(autoincrement())
-  name String @unique
+model Tag {
+  id       Int        @id @default(autoincrement())
+  name     String     @unique
   assetTag AssetTag[] @relation("AssetTag")
 
   @@map("tags")
 }
 
-model AssetTag{
+model AssetTag {
   assetId String
-  tagId Int
-  asset Asset @relation("AssetTag", fields:[assetId],references:[id])
-  tag Tag @relation("AssetTag",fields:[tagId],references:[id])
+  tagId   Int
+  asset   Asset  @relation("AssetTag", fields: [assetId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation("AssetTag", fields: [tagId], references: [id], onDelete: Cascade)
 
-  @@id([assetId,tagId]) //Composite Key for both Ids  
+  @@id([assetId, tagId])
   @@index([tagId])
   @@map("assettags")
 }
- 
-model Folder{
-  id String @id @default(uuid())
-  folderName String
-  parentId String?
-  parentFolder Folder? @relation("FolderToFolder", fields:[parentId], references:[id])
-  isPublic Boolean @default(true)
-  userId String
-  isActive Boolean @default(true)
 
-  asset Asset[] @relation("mainFolder")
-  children Folder[] @relation("FolderToFolder")
-  user User @relation("author", fields:[userId],references:[id],onDelete:SetNull)
-
-  assetFolder AssetFolder[] @relation("afJoin")
+model Folder {
+  id           String         @id @default(uuid())
+  folderName   String
+  parentId     String?
+  isPublic     Boolean        @default(true)
+  userId       String
+  isActive     Boolean        @default(true)
+  assetFolder  AssetFolder[]  @relation("afJoin")
+  asset        Asset[]        @relation("mainFolder")
   collaborator Collaborator[] @relation("collabs")
+  parentFolder Folder?        @relation("FolderToFolder", fields: [parentId], references: [id])
+  children     Folder[]       @relation("FolderToFolder")
+  user         User           @relation("author", fields: [userId], references: [id], onDelete: SetNull)
+
   @@map("folders")
 }
 
-model AssetFolder{
-  assetId String @default(uuid())
-  folderId String @default(uuid())
-  isOwner Boolean @default(false)
+model AssetFolder {
+  assetId   String   @default(uuid())
+  folderId  String   @default(uuid())
+  isOwner   Boolean  @default(false)
   createdAt DateTime @default(now())
+  asset     Asset    @relation("afJoin", fields: [assetId], references: [id], onDelete: Cascade)
+  folder    Folder   @relation("afJoin", fields: [folderId], references: [id], onDelete: Cascade)
 
-  asset Asset @relation("afJoin",fields: [assetId], references:[id], onDelete: Cascade)
-  folder Folder @relation("afJoin",fields: [folderId], references:[id], onDelete: Cascade)
-  @@id([assetId,folderId])
+  @@id([assetId, folderId])
   @@map("assetfolders")
 }
 
-model Collaborator{
-  folderId String @default(uuid())
-  userId String @default(uuid())
+model Collaborator {
+  folderId  String   @default(uuid())
+  userId    String   @default(uuid())
   createdAt DateTime @default(now())
+  folder    Folder   @relation("collabs", fields: [folderId], references: [id], onDelete: Cascade)
+  user      User     @relation("collabs", fields: [userId], references: [id], onDelete: Cascade)
 
-  folder Folder @relation("collabs", fields:[folderId], references:[id], onDelete:Cascade)
-  user User @relation("collabs", fields:[userId], references:[id], onDelete:Cascade)
-  @@id([folderId,userId])
+  @@id([folderId, userId])
   @@map("collaborators")
+}
+
+enum ROLE {
+  user
+  admin
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
 }

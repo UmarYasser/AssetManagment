@@ -1,12 +1,21 @@
 import { HttpAdapterHost, NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { PrismaClientExceptionFilter } from 'common/filters/prisma-exceptions.filter';
+import cookieParser from 'cookie-parser';
 
+const pagesArray = ['','home', 'creator/:id', 'asset/:id', 'create']
 //🚨Make a global prisma exception handler
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // app.setGlobalPrefix('/api/v1')
+  // app.use(express.static(join(__dirname, 'Public')));
+  app.use(cookieParser())
+  app.setGlobalPrefix('/api/v1',{
+    exclude:  pagesArray.map(page => ({
+    path: page,
+    method: RequestMethod.GET,
+  })),
+  })
     
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true,
@@ -17,8 +26,3 @@ async function bootstrap() {
 }
 bootstrap();
 
-/*
-
- {"modelName":"User","driverAdapterError":{"name":"DriverAdapterError","cause":{"originalCode":"23505","originalMessage":"duplicate key value violates unique constraint \"users_email_key\"","kind":"UniqueConstraintViolation","constraint":{"fields":["email"]}}}}
-
-*/

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <!-- <base href="/Public/Home/"> -->
+    <link rel="stylesheet" href="/Home/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+    <nav class="navbar">
+    <div class="nav-logo">
+      <iconify-icon icon="mdi:pinterest" width="24" fill-color="#ddc364"></iconify-icon>
+    </div>
+    <a class="nav-btn nav-btn--home" onclick="navigateTo('home')">
+      <iconify-icon icon="mdi:home" width="18"></iconify-icon>
+      <span>Home</span>
+    </a>
+    <a class="nav-btn" id="createBtn" href="/create">
+      <i class="fa-regular fa-square-plus fa-xl"></i>
+      <span>Create</span>
+    </a>
+    <a class="nav-btn" id="yoursBtn" href="/creator/?user=me">
+      <i class="fa-regular fa-square-plus fa-xl"></i>
+      <span>Yours</span>
+    </a>
+    <input type="text" class="nav-search" placeholder="Search for easy dinners, fashion, etc." id="searchInput">
+    <div class="nav-spacer"></div>
+    <button class="nav-icon-btn" title="Notifications" onclick="showToast('No new notifications')">
+      <iconify-icon icon="mdi:bell-outline" width="22"></iconify-icon>
+      <span class="nav-badge">3</span>
+    </button>
+    <button class="nav-icon-btn" title="Messages" onclick="showToast('No new messages')">
+      <iconify-icon icon="mdi:message-outline" width="22"></iconify-icon>
+    </button>
+    <button class="nav-icon-btn nav-icon-btn--active" id="myPageBtn" title="My Page">
+      <iconify-icon icon="mdi:account" width="22"></iconify-icon>
+    </button>
+  </nav>
+
+    <!-- Main Content -->
+    <main>
+        <div class="masonry-grid" id="grid">
+            <div id="folderList" >
+                <p style="font-size:1.5rem;color:white"> Your Folders</p>
+            </div>
+        </div>
+
+        <!-- <input type="file" id="videoInput"> -->
+    </main>
+
+    <script src="/Home/app.js"></script>
+</body>
+</html>
